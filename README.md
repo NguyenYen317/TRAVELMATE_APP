@@ -124,32 +124,80 @@ E	AI + Social + Notification + Sync
 5. Manage expenses
 6. Share experiences
    
-📂 Project Structure (Example)
+📂 Project Structure
 lib/
-│── models/
-│── services/
-│── screens/
-│── widgets/
-│── providers/
-│── utils/
-│── main.dart
+│
+├── main.dart
+├── app.dart
+│
+├── core/                  # Dùng chung toàn app
+│   ├── constants/         # API keys, màu sắc, config
+│   ├── utils/             # helper, formatter, validator
+│   ├── services/          # service chung (http, storage,...)
+│   └── theme/             # light/dark theme
+│
+├── data/                  # DATA LAYER
+│   ├── models/            # model class (Place, Trip, User...)
+│   ├── repositories/      # xử lý dữ liệu (API + local)
+│   └── datasources/
+│       ├── local/         # SharedPreferences, Hive
+│       └── remote/        # API (Google, AI, Firebase)
+│
+├── features/              # CHIA THEO MODULE (QUAN TRỌNG)
+│
+│   ├── auth/              # 🔐 A làm
+│   │   ├── screens/
+│   │   ├── widgets/
+│   │   ├── provider/      # state management
+│   │   └── auth_service.dart
+│   │
+│   ├── search/            # 🔍 B làm
+│   │   ├── screens/
+│   │   ├── widgets/
+│   │   ├── provider/
+│   │   ├── search_service.dart
+│   │   └── place_detail/
+│   │
+│   ├── map/               # 🗺️ C làm
+│   │   ├── screens/
+│   │   ├── widgets/
+│   │   ├── provider/
+│   │   └── map_service.dart
+│   │
+│   ├── trip/              # 🧳 D làm
+│   │   ├── screens/
+│   │   ├── widgets/
+│   │   ├── provider/
+│   │   └── trip_service.dart
+│   │
+│   ├── expense/           # 💰 D làm
+│   │   ├── screens/
+│   │   ├── widgets/
+│   │   ├── provider/
+│   │   └── expense_service.dart
+│   │
+│   ├── ai/                # 🤖 E làm
+│   │   ├── services/
+│   │   ├── models/
+│   │   └── ai_provider.dart
+│   │
+│   ├── social/            # 🌐 E làm
+│   │   ├── screens/
+│   │   ├── widgets/
+│   │   ├── provider/
+│   │   └── social_service.dart
+│   │
+│   ├── notification/      # 🔔 E làm
+│   │   └── notification_service.dart
+│   │
+│   └── sync/              # ☁️ E làm (khó nhất)
+│       └── sync_service.dart
+│
+├── routes/                # quản lý route
+│   └── app_routes.dart
+│
+└── widgets/               # widget dùng chung toàn app
 
-⚙️ Setup Instructions
-1. Clone project
-git clone https://github.com/NguyenYen317/TRAVELMATE_APP.git
-cd travelmate
-
-3. Install dependencies
-flutter pub get
-
-5. Configure API Keys
-Google Maps API Key
-Places API Key
-Firebase config
-AI API Key
-
-7. Run app
-flutter run
 
 ⚠️ Notes
 Cần bật billing cho Google Maps API
