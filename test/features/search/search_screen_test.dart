@@ -1,0 +1,46 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
+import 'package:travelmate_app/features/search/provider/search_provider.dart';
+import 'package:travelmate_app/features/search/screens/search_screen.dart';
+
+void main() {
+  Widget _buildSearchScreen() {
+    return MaterialApp(
+      home: ChangeNotifierProvider(
+        create: (_) => SearchProvider(),
+        child: const SearchScreen(),
+      ),
+    );
+  }
+
+  testWidgets('SearchScreen renders core UI', (WidgetTester tester) async {
+    await tester.pumpWidget(_buildSearchScreen());
+
+    await tester.pump();
+
+    expect(find.text('Khám phá địa điểm'), findsOneWidget);
+    expect(find.text('Tìm kiếm...'), findsOneWidget);
+    expect(find.text('Nhà hàng'), findsOneWidget);
+    expect(find.text('Khách sạn'), findsOneWidget);
+    expect(find.text('Điểm du lịch'), findsOneWidget);
+  });
+
+  testWidgets('SearchScreen supports typing and clear action', (WidgetTester tester) async {
+    await tester.pumpWidget(_buildSearchScreen());
+    await tester.pump();
+
+    final textFieldFinder = find.byType(TextField);
+    expect(textFieldFinder, findsOneWidget);
+
+    await tester.enterText(textFieldFinder, 'Đà Nẵng');
+    await tester.pump();
+
+    expect(find.byIcon(Icons.clear), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.clear));
+    await tester.pump();
+
+    expect(find.byIcon(Icons.clear), findsNothing);
+  });
+}
