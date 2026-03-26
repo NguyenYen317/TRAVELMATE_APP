@@ -1,8 +1,10 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'app.dart';
 import 'features/auth/auth_service.dart';
+import 'features/search/provider/search_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,5 +18,14 @@ Future<void> main() async {
   }
 
   await AuthService.instance.init();
-  runApp(const TravelMateApp());
+  
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => SearchProvider()),
+        // Bạn có thể thêm các Provider khác ở đây trong tương lai
+      ],
+      child: const TravelMateApp(),
+    ),
+  );
 }

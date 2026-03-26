@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../features/auth/screens/auth_gate_screen.dart';
-import '../features/auth/screens/home_screen.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
+import '../features/home/screens/main_screen.dart';
 
 class AppRoutes {
   static const String authGate = '/';
@@ -30,7 +30,7 @@ class AppRoutes {
         );
       case home:
         return MaterialPageRoute<void>(
-          builder: (_) => const HomeScreen(),
+          builder: (_) => const MainScreen(),
           settings: settings,
         );
       default:
