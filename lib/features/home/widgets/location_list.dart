@@ -21,7 +21,10 @@ class LocationList extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -117,7 +120,7 @@ class LocationList extends StatelessWidget {
               children: [
                 const Icon(Icons.star, size: 14, color: Colors.amber),
                 Text(
-                  ' ${place.rating ?? 0.0}',
+                  ' ${place.rating}',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
