@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
@@ -12,6 +14,9 @@ class SocialService {
 
   final FirebaseFirestore _firestore;
   final FirebaseStorage _storage;
+  static const Duration _uploadTimeout = Duration(seconds: 20);
+  static const Duration _downloadUrlTimeout = Duration(seconds: 10);
+  static const Duration _writeTimeout = Duration(seconds: 15);
 
   CollectionReference<Map<String, dynamic>> get _postsRef =>
       _firestore.collection('social_posts');
@@ -50,11 +55,20 @@ class SocialService {
 
     String? imageUrl;
     if (imageFile != null) {
-      imageUrl = await _uploadPostImage(imageFile, user.id);
+      try {
+        imageUrl = await _uploadPostImage(imageFile, user.id);
+      } catch (_) {
+        // Fallback: still allow posting text when image upload fails.
+        if (normalizedContent.isEmpty) {
+          throw Exception('Khong the tai anh len. Vui long thu lai.');
+        }
+        imageUrl = null;
+      }
     }
 
     final docRef = _postsRef.doc();
-    await docRef.set({
+    await docRef
+        .set({
       'userId': user.id,
       'userName': user.name,
       'userAvatar': user.avatarUrl,
@@ -63,7 +77,8 @@ class SocialService {
       'likeCount': 0,
       'commentCount': 0,
       'createdAt': FieldValue.serverTimestamp(),
-    });
+    })
+        .timeout(_writeTimeout);
 
     return SocialPost(
       id: docRef.id,
@@ -152,11 +167,19 @@ class SocialService {
   }
 
   Future<String> _uploadPostImage(XFile file, String userId) async {
-    final bytes = await file.readAsBytes();
     final path =
         'social_posts/$userId/${DateTime.now().millisecondsSinceEpoch}.jpg';
     final ref = _storage.ref().child(path);
-    await ref.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
-    return ref.getDownloadURL();
+    await ref
+        .putFile(
+          File(file.path),
+          SettableMetadata(contentType: 'image/jpeg'),
+        )
+        .timeout(_uploadTimeout);
+    final imageUrl = await ref.getDownloadURL().timeout(_downloadUrlTimeout);
+    if (imageUrl.trim().isEmpty) {
+      throw Exception('Storage URL is empty');
+    }
+    return imageUrl;
   }
 }

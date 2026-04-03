@@ -20,6 +20,8 @@ class _TripPlanningScreenState extends State<TripPlanningScreen> {
   final TextEditingController _locationNoteCtrl = TextEditingController();
 
   DateTimeRange? _tripRange;
+  TimeOfDay? _tripStartTime;
+  TimeOfDay? _tripEndTime;
   TimeOfDay? _locationTime;
 
   @override
@@ -137,6 +139,60 @@ class _TripPlanningScreenState extends State<TripPlanningScreen> {
               ),
             ),
             const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final picked = await showTimePicker(
+                        context: context,
+                        initialTime:
+                            _tripStartTime ??
+                            const TimeOfDay(hour: 8, minute: 0),
+                      );
+                      if (picked == null) {
+                        return;
+                      }
+                      setState(() {
+                        _tripStartTime = picked;
+                      });
+                    },
+                    icon: const Icon(Icons.schedule),
+                    label: Text(
+                      _tripStartTime == null
+                          ? 'Giờ bắt đầu'
+                          : 'Bắt đầu: ${_tripStartTime!.format(context)}',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final picked = await showTimePicker(
+                        context: context,
+                        initialTime:
+                            _tripEndTime ??
+                            const TimeOfDay(hour: 18, minute: 0),
+                      );
+                      if (picked == null) {
+                        return;
+                      }
+                      setState(() {
+                        _tripEndTime = picked;
+                      });
+                    },
+                    icon: const Icon(Icons.schedule_outlined),
+                    label: Text(
+                      _tripEndTime == null
+                          ? 'Giờ kết thúc'
+                          : 'Kết thúc: ${_tripEndTime!.format(context)}',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
             FilledButton(
               onPressed: () async {
                 final title = _tripTitleCtrl.text.trim();
@@ -151,10 +207,18 @@ class _TripPlanningScreenState extends State<TripPlanningScreen> {
                   title: title,
                   start: _tripRange!.start,
                   end: _tripRange!.end,
+                  startMinuteOfDay: _tripStartTime == null
+                      ? null
+                      : (_tripStartTime!.hour * 60) + _tripStartTime!.minute,
+                  endMinuteOfDay: _tripEndTime == null
+                      ? null
+                      : (_tripEndTime!.hour * 60) + _tripEndTime!.minute,
                 );
                 _tripTitleCtrl.clear();
                 setState(() {
                   _tripRange = null;
+                  _tripStartTime = null;
+                  _tripEndTime = null;
                 });
               },
               child: const Text('Tạo chuyến đi'),
@@ -179,7 +243,7 @@ class _TripPlanningScreenState extends State<TripPlanningScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             DropdownButtonFormField<String>(
-              value: selectedTripId,
+              initialValue: selectedTripId,
               isExpanded: true,
               decoration: const InputDecoration(labelText: 'Chọn chuyến đi'),
               items: provider.trips
@@ -203,7 +267,7 @@ class _TripPlanningScreenState extends State<TripPlanningScreen> {
                 children: [
                   Expanded(
                     child: Text(
-                      '${_fmtDate(selectedTrip.startDate)} - ${_fmtDate(selectedTrip.endDate)}',
+                      '${_fmtDate(selectedTrip.startDate)} ${_fmtMinute(selectedTrip.startMinuteOfDay)} - ${_fmtDate(selectedTrip.endDate)} ${_fmtMinute(selectedTrip.endMinuteOfDay)}',
                       style: TextStyle(
                         fontSize: 12,
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -507,6 +571,15 @@ class _TripPlanningScreenState extends State<TripPlanningScreen> {
     return '$normalized VND';
   }
 
+  String _fmtMinute(int? minuteOfDay) {
+    if (minuteOfDay == null) {
+      return '';
+    }
+    final hour = (minuteOfDay ~/ 60).toString().padLeft(2, '0');
+    final minute = (minuteOfDay % 60).toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
   bool _isSameDate(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
@@ -552,6 +625,8 @@ class _TripPlanningScreenState extends State<TripPlanningScreen> {
       start: trip.startDate,
       end: trip.endDate,
     );
+    var startMinuteOfDay = trip.startMinuteOfDay;
+    var endMinuteOfDay = trip.endMinuteOfDay;
 
     await showDialog<void>(
       context: context,
@@ -592,6 +667,70 @@ class _TripPlanningScreenState extends State<TripPlanningScreen> {
                         '${_fmtDate(range.start)} - ${_fmtDate(range.end)}',
                       ),
                     ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () async {
+                              final initial = startMinuteOfDay == null
+                                  ? const TimeOfDay(hour: 8, minute: 0)
+                                  : TimeOfDay(
+                                      hour: startMinuteOfDay! ~/ 60,
+                                      minute: startMinuteOfDay! % 60,
+                                    );
+                              final picked = await showTimePicker(
+                                context: context,
+                                initialTime: initial,
+                              );
+                              if (picked == null) {
+                                return;
+                              }
+                              setDialogState(() {
+                                startMinuteOfDay =
+                                    (picked.hour * 60) + picked.minute;
+                              });
+                            },
+                            icon: const Icon(Icons.schedule),
+                            label: Text(
+                              startMinuteOfDay == null
+                                  ? 'Giờ bắt đầu'
+                                  : 'Bắt đầu: ${_fmtMinute(startMinuteOfDay)}',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () async {
+                              final initial = endMinuteOfDay == null
+                                  ? const TimeOfDay(hour: 18, minute: 0)
+                                  : TimeOfDay(
+                                      hour: endMinuteOfDay! ~/ 60,
+                                      minute: endMinuteOfDay! % 60,
+                                    );
+                              final picked = await showTimePicker(
+                                context: context,
+                                initialTime: initial,
+                              );
+                              if (picked == null) {
+                                return;
+                              }
+                              setDialogState(() {
+                                endMinuteOfDay =
+                                    (picked.hour * 60) + picked.minute;
+                              });
+                            },
+                            icon: const Icon(Icons.schedule_outlined),
+                            label: Text(
+                              endMinuteOfDay == null
+                                  ? 'Giờ kết thúc'
+                                  : 'Kết thúc: ${_fmtMinute(endMinuteOfDay)}',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -612,6 +751,8 @@ class _TripPlanningScreenState extends State<TripPlanningScreen> {
                       title: title,
                       start: range.start,
                       end: range.end,
+                      startMinuteOfDay: startMinuteOfDay,
+                      endMinuteOfDay: endMinuteOfDay,
                     );
                     if (context.mounted) {
                       Navigator.of(dialogContext).pop();
