@@ -5,6 +5,8 @@ class AppTheme {
     const seed = Color(0xFF5B5DFF);
     return ThemeData(
       useMaterial3: true,
+      fontFamily: 'Roboto',
+      fontFamilyFallback: const ['Noto Sans', 'Arial', 'sans-serif'],
       colorScheme: ColorScheme.fromSeed(seedColor: seed),
       scaffoldBackgroundColor: const Color(0xFFF4F6FF),
       appBarTheme: const AppBarTheme(

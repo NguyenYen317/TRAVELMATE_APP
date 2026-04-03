@@ -1,9 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 
+import '../../../data/models/place.dart';
 import '../../../routes/app_routes.dart';
 import '../../expense/providers/expense_provider.dart';
+import '../../search/provider/search_provider.dart';
 import '../models/trip_models.dart';
 import '../providers/trip_planner_provider.dart';
 
@@ -18,6 +20,7 @@ class _TripPlanningScreenState extends State<TripPlanningScreen> {
   final TextEditingController _tripTitleCtrl = TextEditingController();
   final TextEditingController _locationCtrl = TextEditingController();
   final TextEditingController _locationNoteCtrl = TextEditingController();
+  final Set<String> _selectedFavoritePlaceIds = <String>{};
 
   DateTimeRange? _tripRange;
   TimeOfDay? _locationTime;
@@ -32,8 +35,8 @@ class _TripPlanningScreenState extends State<TripPlanningScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<TripPlannerProvider, ExpenseProvider>(
-      builder: (context, tripProvider, expenseProvider, _) {
+    return Consumer3<TripPlannerProvider, ExpenseProvider, SearchProvider>(
+      builder: (context, tripProvider, expenseProvider, searchProvider, _) {
         if (!tripProvider.isReady || !expenseProvider.isReady) {
           return const Center(child: CircularProgressIndicator());
         }
@@ -46,7 +49,11 @@ class _TripPlanningScreenState extends State<TripPlanningScreen> {
           body: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
-              _buildCreateTripCard(context, tripProvider),
+              _buildCreateTripCard(
+                context,
+                tripProvider,
+                searchProvider.favoritePlaces,
+              ),
               const SizedBox(height: 12),
               if (tripProvider.trips.isNotEmpty)
                 _buildTripSelector(context, tripProvider, expenseProvider),
@@ -93,7 +100,12 @@ class _TripPlanningScreenState extends State<TripPlanningScreen> {
   Widget _buildCreateTripCard(
     BuildContext context,
     TripPlannerProvider provider,
+    List<Place> favoritePlaces,
   ) {
+    final selectedFavoritePlaces = favoritePlaces
+        .where((place) => _selectedFavoritePlaceIds.contains(place.id))
+        .toList();
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -101,15 +113,15 @@ class _TripPlanningScreenState extends State<TripPlanningScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Tạo chuyến đi',
+              'Tao chuyen di',
               style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
             ),
             const SizedBox(height: 10),
             TextField(
               controller: _tripTitleCtrl,
               decoration: const InputDecoration(
-                labelText: 'Tên chuyến đi',
-                hintText: 'Ví dụ: Đà Nẵng 3N2Đ',
+                labelText: 'Ten chuyen di',
+                hintText: 'Vi du: Da Nang 3N2D',
               ),
             ),
             const SizedBox(height: 10),
@@ -132,39 +144,113 @@ class _TripPlanningScreenState extends State<TripPlanningScreen> {
               icon: const Icon(Icons.date_range),
               label: Text(
                 _tripRange == null
-                    ? 'Chọn khoảng ngày'
+                    ? 'Chon khoang ngay'
                     : '${_fmtDate(_tripRange!.start)} - ${_fmtDate(_tripRange!.end)}',
               ),
             ),
             const SizedBox(height: 10),
+            if (favoritePlaces.isNotEmpty) ...[
+              Row(
+                children: [
+                  const Text(
+                    'Chon tu dia diem yeu thich',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${selectedFavoritePlaces.length} da chon',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: favoritePlaces.map((place) {
+                  final isSelected = _selectedFavoritePlaceIds.contains(
+                    place.id,
+                  );
+                  return FilterChip(
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      setState(() {
+                        if (selected) {
+                          _selectedFavoritePlaceIds.add(place.id);
+                        } else {
+                          _selectedFavoritePlaceIds.remove(place.id);
+                        }
+                      });
+                    },
+                    avatar: Icon(
+                      Icons.favorite,
+                      size: 16,
+                      color: isSelected ? Colors.white : Colors.red,
+                    ),
+                    label: Text(place.name),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 10),
+            ] else ...[
+              Text(
+                'Chua co dia diem yeu thich. Them o tab Kham pha de chon nhanh khi tao chuyen di.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
             FilledButton(
               onPressed: () async {
                 final title = _tripTitleCtrl.text.trim();
                 if (title.isEmpty || _tripRange == null) {
                   _showSnack(
                     context,
-                    'Nhập tên chuyến đi và chọn khoảng ngày.',
+                    'Nhap ten chuyen di va chon khoang ngay.',
                   );
                   return;
                 }
+
+                final initialLocationNames = selectedFavoritePlaces
+                    .map((place) => place.name)
+                    .toList();
+
                 await provider.createTrip(
                   title: title,
                   start: _tripRange!.start,
                   end: _tripRange!.end,
+                  initialLocationNames: initialLocationNames,
                 );
+
+                if (!mounted) {
+                  return;
+                }
+
                 _tripTitleCtrl.clear();
                 setState(() {
                   _tripRange = null;
+                  _selectedFavoritePlaceIds.clear();
                 });
+
+                if (initialLocationNames.isNotEmpty) {
+                  _showSnack(
+                    this.context,
+                    'Da tao chuyen di va them ${initialLocationNames.length} dia diem tu yeu thich.',
+                  );
+                }
               },
-              child: const Text('Tạo chuyến đi'),
+              child: const Text('Tao chuyen di'),
             ),
           ],
         ),
       ),
     );
   }
-
   Widget _buildTripSelector(
     BuildContext context,
     TripPlannerProvider provider,
@@ -179,7 +265,7 @@ class _TripPlanningScreenState extends State<TripPlanningScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             DropdownButtonFormField<String>(
-              value: selectedTripId,
+              initialValue: selectedTripId,
               isExpanded: true,
               decoration: const InputDecoration(labelText: 'Chọn chuyến đi'),
               items: provider.trips
@@ -750,3 +836,4 @@ class _TripPlanningScreenState extends State<TripPlanningScreen> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
+
