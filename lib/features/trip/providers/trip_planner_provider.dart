@@ -71,6 +71,8 @@ class TripPlannerProvider extends ChangeNotifier {
     required String title,
     required DateTime start,
     required DateTime end,
+    int? startMinuteOfDay,
+    int? endMinuteOfDay,
   }) async {
     final normalizedStart = DateTime(start.year, start.month, start.day);
     final normalizedEnd = DateTime(end.year, end.month, end.day);
@@ -80,6 +82,8 @@ class TripPlannerProvider extends ChangeNotifier {
       startDate: normalizedStart,
       endDate: normalizedEnd,
       locations: [],
+      startMinuteOfDay: startMinuteOfDay,
+      endMinuteOfDay: endMinuteOfDay,
     );
     _trips.insert(0, trip);
     _activeTripId = trip.id;
@@ -144,6 +148,8 @@ class TripPlannerProvider extends ChangeNotifier {
     required String title,
     required DateTime start,
     required DateTime end,
+    int? startMinuteOfDay,
+    int? endMinuteOfDay,
   }) async {
     final index = _trips.indexWhere((item) => item.id == tripId);
     if (index < 0) {
@@ -175,6 +181,8 @@ class TripPlannerProvider extends ChangeNotifier {
       startDate: normalizedStart,
       endDate: normalizedEnd,
       locations: updatedLocations,
+      startMinuteOfDay: startMinuteOfDay ?? current.startMinuteOfDay,
+      endMinuteOfDay: endMinuteOfDay ?? current.endMinuteOfDay,
     );
 
     if (_activeTripId == tripId) {

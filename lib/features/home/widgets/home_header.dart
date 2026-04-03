@@ -11,7 +11,9 @@ class HomeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
-    final userName = authProvider.currentUser?.name ?? 'Bạn';
+    final fallbackName =
+        authProvider.currentUser?.email?.split('@').first ?? 'Bạn';
+    final userName = (authProvider.currentUser?.name ?? fallbackName).trim();
     final colorScheme = Theme.of(context).colorScheme;
 
     return SliverToBoxAdapter(

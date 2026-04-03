@@ -15,6 +15,7 @@ class AIHeroCard extends StatefulWidget {
 
 class _AIHeroCardState extends State<AIHeroCard> {
   final TextEditingController _plannerInputCtrl = TextEditingController();
+  bool _showAllDays = false;
 
   @override
   void dispose() {
@@ -132,7 +133,7 @@ class _AIHeroCardState extends State<AIHeroCard> {
                   ],
                   if (plan != null) ...[
                     const SizedBox(height: 14),
-                    _PlannerResultView(plan: plan),
+                    _PlannerResultView(plan: plan, showAllDays: _showAllDays),
                     const SizedBox(height: 12),
                     Wrap(
                       spacing: 8,
@@ -158,11 +159,29 @@ class _AIHeroCardState extends State<AIHeroCard> {
                           icon: const Icon(Icons.add_road_outlined),
                           label: const Text('Tạo chuyến đi từ AI'),
                         ),
+                        if (plan.itinerary.length > 2)
+                          OutlinedButton(
+                            onPressed: aiProvider.isLoading
+                                ? null
+                                : () {
+                                    setState(() {
+                                      _showAllDays = !_showAllDays;
+                                    });
+                                  },
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              side: const BorderSide(color: Colors.white70),
+                            ),
+                            child: Text(_showAllDays ? 'Thu gọn' : 'Xem thêm'),
+                          ),
                         TextButton(
                           onPressed: aiProvider.isLoading
                               ? null
                               : () {
                                   _plannerInputCtrl.clear();
+                                  setState(() {
+                                    _showAllDays = false;
+                                  });
                                   aiProvider.clearResult();
                                 },
                           child: const Text(
@@ -184,6 +203,11 @@ class _AIHeroCardState extends State<AIHeroCard> {
 
   Future<void> _generate(AIProvider aiProvider) async {
     final ok = await aiProvider.generatePlanner(_plannerInputCtrl.text);
+    if (ok && mounted) {
+      setState(() {
+        _showAllDays = false;
+      });
+    }
     if (ok || !mounted || aiProvider.error == null) {
       return;
     }
@@ -194,12 +218,17 @@ class _AIHeroCardState extends State<AIHeroCard> {
 }
 
 class _PlannerResultView extends StatelessWidget {
-  const _PlannerResultView({required this.plan});
+  const _PlannerResultView({required this.plan, required this.showAllDays});
 
   final PlannerResult plan;
+  final bool showAllDays;
 
   @override
   Widget build(BuildContext context) {
+    final visibleDays = showAllDays
+        ? plan.itinerary
+        : plan.itinerary.take(2).toList();
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -224,7 +253,7 @@ class _PlannerResultView extends StatelessWidget {
           else
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: plan.itinerary
+              children: visibleDays
                   .map(
                     (day) => Padding(
                       padding: const EdgeInsets.only(bottom: 8),
