@@ -32,8 +32,8 @@ Future<void> main() async {
         ChangeNotifierProvider<AppProvider>(create: (_) => AppProvider()),
         ChangeNotifierProvider<AuthProvider>(create: (_) => AuthProvider()),
         ChangeNotifierProvider<SearchProvider>(create: (_) => SearchProvider()),
-        ChangeNotifierProxyProvider<AuthProvider, TripPlannerProvider>(
         ChangeNotifierProvider<AIProvider>(create: (_) => AIProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, TripPlannerProvider>(
           create: (_) => TripPlannerProvider(),
           update: (_, authProvider, tripProvider) {
             final provider = tripProvider ?? TripPlannerProvider();
@@ -41,8 +41,8 @@ Future<void> main() async {
             return provider;
           },
         ),
-        ChangeNotifierProxyProvider<AuthProvider, ExpenseProvider>(
         ChangeNotifierProvider<SocialProvider>(create: (_) => SocialProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, ExpenseProvider>(
           create: (_) => ExpenseProvider(),
           update: (_, authProvider, expenseProvider) {
             final provider = expenseProvider ?? ExpenseProvider();

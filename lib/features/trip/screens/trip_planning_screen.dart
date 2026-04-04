@@ -481,6 +481,14 @@ class _TripPlanningScreenState extends State<TripPlanningScreen> {
               'Lịch trình ngày ${_fmtDate(selectedDate)}',
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
+            const SizedBox(height: 4),
+            Text(
+              'Nhấn giữ biểu tượng kéo để sắp xếp địa điểm.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
             const SizedBox(height: 10),
             if (locations.isEmpty)
               const Padding(
@@ -489,6 +497,7 @@ class _TripPlanningScreenState extends State<TripPlanningScreen> {
               )
             else
               ReorderableListView.builder(
+                buildDefaultDragHandles: false,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: locations.length,
@@ -519,6 +528,13 @@ class _TripPlanningScreenState extends State<TripPlanningScreen> {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          ReorderableDragStartListener(
+                            index: index,
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 4),
+                              child: Icon(Icons.drag_indicator),
+                            ),
+                          ),
                           IconButton(
                             tooltip: 'Sửa địa điểm',
                             icon: const Icon(Icons.edit_outlined),
