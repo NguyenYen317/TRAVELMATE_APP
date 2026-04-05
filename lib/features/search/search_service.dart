@@ -2,12 +2,9 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import '../../services/api_service.dart';
 import '../../data/models/place.dart';
 
 class SearchService {
-  final ApiService _apiService = ApiService();
-
   // Cache lưu trữ kết quả theo query + filter + tọa độ
   final Map<String, List<Place>> _searchCache = {};
 
@@ -71,7 +68,6 @@ class SearchService {
     try {
       double targetLat = lat ?? 0;
       double targetLon = lon ?? 0;
-      String viewbox = "";
 
       // 2. Xác định tọa độ trung tâm (Geocoding) nếu cần
       if (normalizedQuery.isNotEmpty && (lat == null || lon == null)) {

@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -27,6 +30,15 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
     'Ticket': 'Vé',
     'Shopping': 'Mua sắm',
     'Other': 'Khác',
+  };
+
+  static const Map<String, Color> _typeColors = {
+    'Food': Color(0xFFEF5350),
+    'Transport': Color(0xFF42A5F5),
+    'Stay': Color(0xFF66BB6A),
+    'Ticket': Color(0xFFFFCA28),
+    'Shopping': Color(0xFFAB47BC),
+    'Other': Color(0xFF8D6E63),
   };
 
   final TextEditingController _titleCtrl = TextEditingController();
@@ -80,14 +92,12 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
         }
 
         final expenses = expenseProvider.filteredExpensesByTrip(trip.id);
-        final total = expenseProvider.totalByTrip(trip.id);
-
         return Scaffold(
           appBar: AppBar(title: Text('Chi phí - ${trip.title}')),
           body: ListView(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
             children: [
-              _buildSummaryCard(total),
+              _buildCategoryPieChartCard(expenseProvider, trip),
               const SizedBox(height: 12),
               _buildFilterCard(context, expenseProvider, trip),
               const SizedBox(height: 12),
@@ -101,7 +111,38 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
     );
   }
 
-  Widget _buildSummaryCard(double total) {
+  Widget _buildCategoryPieChartCard(ExpenseProvider provider, Trip trip) {
+    final allTripExpenses = provider.expensesByTrip(trip.id);
+    if (allTripExpenses.isEmpty) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(14),
+          child: Text('Chưa có dữ liệu để thống kê biểu đồ danh mục.'),
+        ),
+      );
+    }
+
+    final amountByType = <String, double>{};
+    for (final expense in allTripExpenses) {
+      final type = expense.type.trim().isEmpty ? 'Other' : expense.type;
+      amountByType[type] = (amountByType[type] ?? 0) + expense.amount;
+    }
+
+    final entries = amountByType.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final total = entries.fold<double>(0, (sum, item) => sum + item.value);
+
+    final slices = entries
+        .map(
+          (entry) => _PieSlice(
+            type: entry.key,
+            amount: entry.value,
+            ratio: total <= 0 ? 0 : entry.value / total,
+            color: _colorForType(entry.key),
+          ),
+        )
+        .toList();
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -109,13 +150,68 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Tổng chi phí',
+              'Thống kê chi phí theo danh mục',
               style: TextStyle(fontWeight: FontWeight.w700),
             ),
-            const SizedBox(height: 6),
-            Text(
-              '${total.toStringAsFixed(0)} VND',
-              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+            const SizedBox(height: 12),
+            Center(
+              child: SizedBox(
+                width: 220,
+                height: 220,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    CustomPaint(
+                      size: const Size.square(220),
+                      painter: _ExpensePieChartPainter(slices: slices),
+                    ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Tổng',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          '${total.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Text('VND', style: TextStyle(fontSize: 12)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            ...slices.map(
+              (slice) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: slice.color,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(_typeLabel(slice.type))),
+                    Text(
+                      '${(slice.ratio * 100).toStringAsFixed(1)}% • ${slice.amount.toStringAsFixed(0)} VND',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -470,6 +566,23 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
     return _typeLabels[value] ?? value;
   }
 
+  Color _colorForType(String type) {
+    final color = _typeColors[type];
+    if (color != null) {
+      return color;
+    }
+
+    const fallbackPalette = [
+      Color(0xFF26A69A),
+      Color(0xFF5C6BC0),
+      Color(0xFFFF7043),
+      Color(0xFF7E57C2),
+      Color(0xFF26C6DA),
+    ];
+    final index = type.hashCode.abs() % fallbackPalette.length;
+    return fallbackPalette[index];
+  }
+
   DateTime _onlyDate(DateTime value) {
     return DateTime(value.year, value.month, value.day);
   }
@@ -750,3 +863,57 @@ extension _IterableX<T> on Iterable<T> {
   T? get firstOrNull => isEmpty ? null : first;
 }
 
+class _PieSlice {
+  const _PieSlice({
+    required this.type,
+    required this.amount,
+    required this.ratio,
+    required this.color,
+  });
+
+  final String type;
+  final double amount;
+  final double ratio;
+  final Color color;
+}
+
+class _ExpensePieChartPainter extends CustomPainter {
+  _ExpensePieChartPainter({required this.slices});
+
+  final List<_PieSlice> slices;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (slices.isEmpty) {
+      return;
+    }
+
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = math.min(size.width, size.height) / 2;
+    final rect = Rect.fromCircle(center: center, radius: radius - 4);
+    final paint = Paint()..style = PaintingStyle.stroke;
+
+    var startAngle = -math.pi / 2;
+    for (final slice in slices) {
+      final sweep = (slice.ratio * 2 * math.pi)
+          .clamp(0.0, 2 * math.pi)
+          .toDouble();
+      paint
+        ..color = slice.color
+        ..strokeWidth = 36
+        ..strokeCap = StrokeCap.butt;
+      canvas.drawArc(rect, startAngle, sweep, false, paint);
+      startAngle += sweep;
+    }
+
+    final holePaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, radius * 0.46, holePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ExpensePieChartPainter oldDelegate) {
+    return oldDelegate.slices != slices;
+  }
+}
