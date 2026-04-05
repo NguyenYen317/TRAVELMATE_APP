@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'dart:math';
 
+import '../../sync/sync_service.dart';
 import '../models/expense_item.dart';
 
 class ExpenseProvider extends ChangeNotifier {
@@ -10,12 +11,15 @@ class ExpenseProvider extends ChangeNotifier {
   }
 
   static const String _boxName = 'expense_box';
-  static const String _expenseKey = 'expenses';
+  static const String _expenseKeyPrefix = 'expenses';
+  static const String _expenseUpdatedAtKeyPrefix = 'expenses_updated_at';
 
   final List<ExpenseItem> _allExpenses = [];
   bool _isReady = false;
+  String? _currentUserId;
   DateTime? _filterDate;
   String _filterType = 'All';
+  int _reloadVersion = 0;
 
   static const List<String> types = [
     'All',
@@ -31,26 +35,127 @@ class ExpenseProvider extends ChangeNotifier {
   DateTime? get filterDate => _filterDate;
   String get filterType => _filterType;
 
+  void setUserId(String? userId) {
+    if (_currentUserId == userId) {
+      return;
+    }
+    _currentUserId = userId;
+    _reloadForUser(userId);
+  }
+
   Future<void> _init() async {
+    await _reloadForUser(_currentUserId);
+  }
+
+  Future<void> _reloadForUser(String? userId) async {
+    final requestVersion = ++_reloadVersion;
+    final storageKey = _buildExpenseKey(userId);
+
+    _isReady = false;
+    notifyListeners();
+
     final box = await Hive.openBox<dynamic>(_boxName);
     final rawExpenses =
-        box.get(_expenseKey, defaultValue: <dynamic>[]) as List<dynamic>;
+        box.get(storageKey, defaultValue: <dynamic>[]) as List<dynamic>;
+
+    var localExpenses = rawExpenses
+        .map((item) => ExpenseItem.fromMap(item as Map<dynamic, dynamic>))
+        .toList();
+
+    if (userId != null) {
+      final cloudPayload = await SyncService.instance.loadExpenses(
+        userId: userId,
+      );
+      if (requestVersion != _reloadVersion || _currentUserId != userId) {
+        return;
+      }
+
+      if (cloudPayload != null) {
+        final cloudExpenses = cloudPayload.items
+            .map((item) => ExpenseItem.fromMap(item))
+            .toList();
+        final cloudHasData = cloudExpenses.isNotEmpty;
+        final localHasData = localExpenses.isNotEmpty;
+
+        if (!localHasData && cloudHasData) {
+          localExpenses = cloudExpenses;
+          await _saveLocalOnly(_expensesToRaw(localExpenses));
+        } else if (localHasData && !cloudHasData) {
+          await SyncService.instance.saveExpenses(
+            userId: userId,
+            expenses: _expensesToRaw(localExpenses),
+          );
+        } else if (localHasData && cloudHasData) {
+          final localUpdatedAt = _readLocalUpdatedAt(box, storageKey);
+          if (cloudPayload.updatedAtMs >= localUpdatedAt) {
+            localExpenses = cloudExpenses;
+            await _saveLocalOnly(_expensesToRaw(localExpenses));
+          } else {
+            await SyncService.instance.saveExpenses(
+              userId: userId,
+              expenses: _expensesToRaw(localExpenses),
+            );
+          }
+        }
+      }
+    }
+
+    // Ignore stale async loads when user switches account quickly.
+    if (requestVersion != _reloadVersion || _currentUserId != userId) {
+      return;
+    }
+
     _allExpenses
       ..clear()
-      ..addAll(
-        rawExpenses
-            .map((item) => ExpenseItem.fromMap(item as Map<dynamic, dynamic>))
-            .toList(),
-      );
+      ..addAll(localExpenses);
+
+    _filterDate = null;
+    _filterType = 'All';
     _isReady = true;
     notifyListeners();
   }
 
+  String get _expenseKey {
+    return _buildExpenseKey(_currentUserId);
+  }
+
+  String _buildExpenseKey(String? userId) {
+    final userKey = userId ?? 'guest';
+    return '$_expenseKeyPrefix::$userKey';
+  }
+
   Future<void> _persist() async {
+    final rawExpenses = _expensesToRaw(_allExpenses);
+    await _saveLocalOnly(rawExpenses);
+
+    final userId = _currentUserId;
+    if (userId != null) {
+      await SyncService.instance.saveExpenses(
+        userId: userId,
+        expenses: rawExpenses,
+      );
+    }
+  }
+
+  List<Map<String, dynamic>> _expensesToRaw(List<ExpenseItem> expenses) {
+    return expenses.map((expense) => expense.toMap()).toList();
+  }
+
+  String _buildExpenseUpdatedAtKey(String storageKey) {
+    return '$_expenseUpdatedAtKeyPrefix::$storageKey';
+  }
+
+  int _readLocalUpdatedAt(Box<dynamic> box, String storageKey) {
+    final raw = box.get(_buildExpenseUpdatedAtKey(storageKey), defaultValue: 0);
+    return raw is int ? raw : 0;
+  }
+
+  Future<void> _saveLocalOnly(List<Map<String, dynamic>> rawExpenses) async {
     final box = await Hive.openBox<dynamic>(_boxName);
+    await box.put(_expenseKey, rawExpenses);
     await box.put(
-      _expenseKey,
-      _allExpenses.map((expense) => expense.toMap()).toList(),
+      _buildExpenseUpdatedAtKey(_expenseKey),
+      DateTime.now().millisecondsSinceEpoch,
     );
   }
 

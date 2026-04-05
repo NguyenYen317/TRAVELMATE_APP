@@ -36,7 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
     try {
-      await AuthService.instance.loginLocal(
+      await context.read<AuthProvider>().loginLocal(
         username: _usernameController.text,
         password: _passwordController.text,
       );
@@ -62,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleGoogleLogin() async {
     setState(() => _isLoading = true);
     try {
-      await AuthService.instance.loginWithGoogle();
+      await context.read<AuthProvider>().loginWithGoogle();
       if (!mounted) {
         return;
       }
