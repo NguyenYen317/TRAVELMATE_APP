@@ -11,7 +11,7 @@ class AIPlannerService {
   AIPlannerService({http.Client? client}) : _client = client ?? http.Client();
 
   final http.Client _client;
-
+  // route định hướng hệ thống AI (Ollama)(2)
   Future<PlannerResult> generatePlan(String rawInput) async {
     final provider = AppConstants.aiProvider.trim().toLowerCase();
     if (provider == 'ollama') {
@@ -20,6 +20,7 @@ class AIPlannerService {
     return _generateWithGemini(rawInput.trim());
   }
 
+  // Định tuyến theo nhà cung cấp hệ thống AI (Ollama)
   Future<String> generateChatReply({
     required String userInput,
     required List<AIChatMessage> history,
@@ -80,6 +81,7 @@ class AIPlannerService {
     return _toPlannerResult(rawText);
   }
 
+  // Gọi Ollama(2)
   Future<PlannerResult> _generateWithOllama(String userInput) async {
     final baseUrl = AppConstants.ollamaBaseUrl.trim();
     if (baseUrl.isEmpty) {
@@ -316,6 +318,7 @@ $userInput
     return rawText.trim();
   }
 
+  // Tạo request, gọi API và xử lý phản hồi cho chatbot
   Future<String> _chatWithOllama({
     required String userInput,
     required List<AIChatMessage> history,

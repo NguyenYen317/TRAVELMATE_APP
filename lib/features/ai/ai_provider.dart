@@ -23,7 +23,7 @@ class AIProvider extends ChangeNotifier {
   List<AIChatMessage> get chatMessages => List.unmodifiable(_chatMessages);
   bool get isChatLoading => _isChatLoading;
   String? get chatError => _chatError;
-
+  // Provider quản lý state và lỗi của Planner(2)
   Future<bool> generatePlanner(String input) async {
     final query = input.trim();
     if (query.isEmpty) {
@@ -58,6 +58,7 @@ class AIProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // UI gửi yêu cầu chat và nhận phản hồi(1)
   Future<void> sendChatMessage(String input) async {
     final query = input.trim();
     if (query.isEmpty || _isChatLoading) {

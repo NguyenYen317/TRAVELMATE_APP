@@ -45,7 +45,7 @@ class _AIChatTabState extends State<AIChatTab> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
+    // UI tự cập nhật theo trạng thái chat (tin nhắn mới, đang tải, lỗi)
     return Consumer<AIProvider>(
       builder: (context, aiProvider, _) {
         final messages = aiProvider.chatMessages;
@@ -147,6 +147,7 @@ class _AIChatTabState extends State<AIChatTab> {
     );
   }
 
+  // UI nhận input và gửi yêu cầu
   Future<void> _onSend(AIProvider aiProvider) async {
     final text = _inputController.text.trim();
     if (text.isEmpty || aiProvider.isChatLoading) {

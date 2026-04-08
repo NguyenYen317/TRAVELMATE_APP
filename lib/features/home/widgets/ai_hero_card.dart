@@ -72,6 +72,7 @@ class _AIHeroCardState extends State<AIHeroCard> {
                     children: [
                       Expanded(
                         child: TextField(
+                          // Người dùng nhập yêu cầu
                           controller: _plannerInputCtrl,
                           textInputAction: TextInputAction.done,
                           onSubmitted: (_) => _generate(aiProvider),
@@ -133,6 +134,7 @@ class _AIHeroCardState extends State<AIHeroCard> {
                   ],
                   if (plan != null) ...[
                     const SizedBox(height: 14),
+                    // Hiển thị kết quả planner
                     _PlannerResultView(plan: plan, showAllDays: _showAllDays),
                     const SizedBox(height: 12),
                     Wrap(
@@ -143,6 +145,7 @@ class _AIHeroCardState extends State<AIHeroCard> {
                           onPressed: aiProvider.isLoading
                               ? null
                               : () async {
+                                  // Lưu kết quả planner vào Trip và chuyển sang tab Trip
                                   await tripProvider.createTripFromAiPlan(plan);
                                   if (!context.mounted) {
                                     return;
@@ -201,6 +204,7 @@ class _AIHeroCardState extends State<AIHeroCard> {
     );
   }
 
+  // UI gửi yêu cầu tạo lịch trình và xử lý kết quả
   Future<void> _generate(AIProvider aiProvider) async {
     final ok = await aiProvider.generatePlanner(_plannerInputCtrl.text);
     if (ok && mounted) {
